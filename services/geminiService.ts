@@ -15,7 +15,7 @@ export const validateApiKey = async (key: string): Promise<boolean> => {
     const validationAi = new GoogleGenAI({ apiKey: key });
     // Use a lightweight call to test the API key
     await validationAi.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-2.5-pro',
       contents: 'test',
     });
     return true;
@@ -271,7 +271,7 @@ const getPhotographicStyleDescription = (style: PhotographicStyle): string => {
 export const generateImageFromText = async (prompt: string, config: GenerationConfig): Promise<string[]> => {
   return handleApiCall(async () => {
     const response = await ai.models.generateImages({
-      model: 'imagen-4.0-generate-001',
+      model: 'imagen-4.0-ultra-generate-001',
       prompt: prompt,
       config: {
         numberOfImages: config.numberOfImages,
@@ -287,7 +287,7 @@ export const generateImageFromText = async (prompt: string, config: GenerationCo
 export const generateText = async (prompt: string): Promise<string> => {
   return handleApiCall(async () => {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-2.5-pro',
       contents: prompt,
     });
     return response.text;
@@ -297,7 +297,7 @@ export const generateText = async (prompt: string): Promise<string> => {
 export const generateTextWithGoogleSearch = async (prompt: string): Promise<{ text: string, sources: { title: string, uri: string }[] }> => {
   return handleApiCall(async () => {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-2.5-pro',
       contents: prompt,
       config: {
         tools: [{googleSearch: {}}],
@@ -318,7 +318,7 @@ export const editImageWithConsistency = async (prompt: string, profile: Consiste
     parts.push({ text: fullPrompt });
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-image-preview',
+      model: 'gemini-2.5-pro',
       contents: { parts },
       config: {
         responseModalities: [Modality.IMAGE, Modality.TEXT],
@@ -393,7 +393,7 @@ export const advancedImageEdit = async (request: AdvancedEditRequest, profiles: 
     parts.push({ text: prompt });
 
     const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-image-preview',
+        model: 'gemini-2.5-pro',
         contents: { parts },
         config: {
             responseModalities: [Modality.IMAGE, Modality.TEXT],
@@ -421,42 +421,62 @@ export const advancedImageEdit = async (request: AdvancedEditRequest, profiles: 
 
 export const photorealisticGeneration = async (request: PhotorealisticRequest, profileName: string | null): Promise<string[]> => {
   return handleApiCall(async () => {
-    let finalPrompt = `${request.prompt} no seguinte ambiente: ${request.environment}.`;
+    let finalPrompt = `**Master Prompt: Geração de Imagem Fotorrealista de Alta Qualidade**
+
+**Objetivo:** Criar uma imagem digital com o máximo de realismo, simulando uma fotografia profissional. A atenção aos detalhes é crucial.
+
+**Instrução Principal:** ${request.prompt}
+
+**Ambiente e Contexto:** A cena se passa em/no ${request.environment}.`;
 
     if (profileName) {
-        finalPrompt += ` O sujeito principal deve ter a aparência consistente com o perfil '${profileName}'.`;
+        finalPrompt += `\n\n**Consistência de Perfil:** O sujeito principal deve ser renderizado com a aparência e características consistentes com o perfil de referência '${profileName}'.`;
     }
 
     if (request.autoEquip) {
-        finalPrompt += ' A IA deve escolher a melhor câmera, lente e configurações para um resultado fotorrealista profissional.';
+        finalPrompt += '\n\n**Equipamento (Automático):** A IA deve selecionar a combinação ideal de câmera, lente e configurações para alcançar um resultado fotorrealista de nível profissional, otimizado para a cena descrita.';
     } else {
-        finalPrompt += ` ${getAdvancedLightingDescription(request.lighting)}`;
-        finalPrompt += ` Capturado com ${getCameraBodyDescription(request.camera.cameraBody)}.`;
-        finalPrompt += ` ${getLensDescription(request.camera.lens)}.`;
-        finalPrompt += ` ${getSensorDescription(request.camera.sensor)}.`;
-        finalPrompt += ` Configurações: Abertura ${request.camera.aperture}, Obturador ${request.camera.shutterSpeed}, ${request.camera.iso}.`;
-        finalPrompt += ` O ponto de foco está em '${request.depthOfField.focusPoint}'.`;
-        finalPrompt += ` O bokeh (desfoque de fundo) é ${request.depthOfField.bokehIntensity} e com qualidade ${request.depthOfField.bokehQuality}.`;
-        if(request.camera.lensDistortion !== 'none') finalPrompt += ` A lente tem distorção do tipo ${request.camera.lensDistortion}.`;
-        if(request.camera.chromaticAberration !== 'none') finalPrompt += ` Com ${request.camera.chromaticAberration} aberração cromática.`;
+        finalPrompt += `\n\n**Configuração de Câmera e Lente:**`;
+        finalPrompt += `\n- **Câmera:** Capturado com ${getCameraBodyDescription(request.camera.cameraBody)}.`;
+        finalPrompt += `\n- **Lente:** ${getLensDescription(request.camera.lens)}.`;
+        finalPrompt += `\n- **Sensor:** ${getSensorDescription(request.camera.sensor)}.`;
+        finalPrompt += `\n- **Parâmetros:** Abertura ${request.camera.aperture}, Velocidade do Obturador ${request.camera.shutterSpeed}, ISO ${request.camera.iso}.`;
+        if(request.camera.lensDistortion !== 'none') finalPrompt += `\n- **Distorção da Lente:** Incluir distorção do tipo ${request.camera.lensDistortion}.`;
+        if(request.camera.chromaticAberration !== 'none') finalPrompt += `\n- **Aberração Cromática:** Incluir ${request.camera.chromaticAberration} aberração cromática nas bordas de alto contraste.`;
     }
 
-    finalPrompt += getConceptualPrompt(request);
+    finalPrompt += `\n\n**Iluminação e Atmosfera:**`;
+    finalPrompt += `\n- **Iluminação Principal:** ${getAdvancedLightingDescription(request.lighting)}`;
     finalPrompt += getAtmosphericAndMaterialPrompt(request);
 
+    finalPrompt += `\n\n**Profundidade de Campo e Foco:**`;
+    finalPrompt += `\n- **Ponto de Foco:** O foco nítido deve estar em '${request.depthOfField.focusPoint}'.`;
+    finalPrompt += `\n- **Bokeh:** O desfoque de fundo (bokeh) deve ter intensidade ${request.depthOfField.bokehIntensity} e uma qualidade ${request.depthOfField.bokehQuality}, com orbs suaves e agradáveis.`;
+
+    const conceptualPrompt = getConceptualPrompt(request);
+    if (conceptualPrompt) {
+        finalPrompt += `\n\n**Conceito e Narrativa:** ${conceptualPrompt}`;
+    }
+
     const styleDesc = getPhotographicStyleDescription(request.style.base);
-    if (styleDesc) {
-        finalPrompt += ` ${styleDesc}`;
-    }
-    if (request.style.customMix) {
-        finalPrompt += ` ${request.style.customMix}.`;
+    if (styleDesc || request.style.customMix) {
+      finalPrompt += `\n\n**Estilo Fotográfico:**`;
+      if (styleDesc) finalPrompt += `\n- **Base:** ${styleDesc}`;
+      if (request.style.customMix) finalPrompt += `\n- **Mistura Customizada:** ${request.style.customMix}`;
     }
 
-    finalPrompt += getFilmAndDefectsPrompt(request.film);
+    const filmAndDefectsPrompt = getFilmAndDefectsPrompt(request.film);
+    if (filmAndDefectsPrompt) {
+        finalPrompt += `\n\n**Emulação de Filme e Defeitos Ópticos:** ${filmAndDefectsPrompt}`;
+    }
     
-    finalPrompt += ` A imagem final deve simular uma resolução ${request.output.resolution} e qualidade de renderização ${request.output.steps}.`;
+    if (request.negativePrompt) {
+        finalPrompt += `\n\n**Prompt Negativo (Exclusões):** Evitar estritamente os seguintes elementos: ${request.negativePrompt}.`;
+    }
 
-    const modelToUse = request.generationEngine === 'nano_experimental' ? 'gemini-2.5-flash-image-preview' : 'imagen-4.0-generate-001';
+    finalPrompt += `\n\n**Qualidade de Saída:** A imagem final deve ser renderizada em ultra-alta definição (UHD 8K), simulando uma resolução de ${request.output.resolution} e ${request.output.steps} passos de renderização para garantir detalhes finos e ausência de artefatos.`;
+
+    const modelToUse = request.generationEngine === 'nano_experimental' ? 'gemini-2.5-pro' : 'imagen-4.0-ultra-generate-001';
     const numberOfImages = request.baseImages && request.baseImages.length > 0 ? 1 : request.numberOfImages;
 
     if (request.baseImages && request.baseImages.length > 0) {
@@ -464,7 +484,7 @@ export const photorealisticGeneration = async (request: PhotorealisticRequest, p
         parts.push({ text: finalPrompt });
 
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash-image-preview',
+            model: 'gemini-2.5-pro',
             contents: { parts },
             config: {
                 responseModalities: [Modality.IMAGE],
@@ -509,7 +529,7 @@ export const generateImageWithMultipleProfiles = async (prompt: string, profiles
         parts.push({ text: fullPrompt });
 
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash-image-preview',
+            model: 'gemini-2.5-pro',
             contents: { parts },
             config: {
                 responseModalities: [Modality.IMAGE, Modality.TEXT],
@@ -554,7 +574,7 @@ export const editImageWithPhotographicReality = async (prompt: string, profile: 
         parts.push({ text: fullPrompt });
 
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash-image-preview',
+            model: 'gemini-2.5-pro',
             contents: { parts },
             config: {
                 responseModalities: [Modality.IMAGE, Modality.TEXT],
@@ -585,7 +605,7 @@ export const generatePhotoshootVariationPrompt = async (previousShot: UploadedIm
         ];
         
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
+            model: 'gemini-2.5-pro',
             contents: { parts },
         });
         return response.text.trim();
@@ -600,7 +620,7 @@ export const analyzeImageStyle = async (image: UploadedImage): Promise<string> =
         ];
 
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
+            model: 'gemini-2.5-pro',
             contents: { parts },
         });
         
@@ -627,7 +647,7 @@ export const getCameraScenePreview = async (request: PhotorealisticRequest): Pro
          finalPrompt += ' Responda apenas com a descrição da cena.';
 
          const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
+            model: 'gemini-2.5-pro',
             contents: finalPrompt,
          });
 
@@ -643,7 +663,7 @@ export const rerenderFromAngle = async (image: UploadedImage, anglePrompt: strin
     ];
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-image-preview',
+      model: 'gemini-2.5-pro',
       contents: { parts },
       config: {
         responseModalities: [Modality.IMAGE],
@@ -716,7 +736,7 @@ export const expandImage = async (request: ExpandImageRequest): Promise<Partial<
         ];
 
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash-image-preview',
+            model: 'gemini-2.5-pro',
             contents: { parts },
             config: {
                 responseModalities: [Modality.IMAGE],
@@ -795,7 +815,7 @@ export const generateImageLabComposition = async (request: ImageLabRequest): Pro
         parts.push({ text: prompt });
 
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash-image-preview',
+            model: 'gemini-2.5-pro',
             contents: { parts },
             config: {
                 responseModalities: [Modality.IMAGE, Modality.TEXT],
