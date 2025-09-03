@@ -1,7 +1,7 @@
 
 
 import { GoogleGenAI, Modality, Part, Type } from "@google/genai";
-import type { ConsistencyProfile, UploadedImage, GenerationConfig, AdditionalStyle, AdvancedEditRequest, PhotorealisticRequest, TimeOfDay, LightSource, LensType, SensorType, PhotographicStyle, AspectRatio, ChatMessage, ExpandImageRequest, ImageLabRequest, CameraAngle } from '../types';
+import type { ConsistencyProfile, UploadedImage, GenerationConfig, AdditionalStyle, AdvancedEditRequest, PhotorealisticRequest, TimeOfDay, LightSource, LensType, PhotographicStyle, AspectRatio, ChatMessage, ExpandImageRequest, ImageLabRequest, CameraAngle } from '../types';
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
@@ -253,35 +253,34 @@ const getCameraBodyDescription = (camera: string): string => {
 };
 
 const getLensDescription = (lens: LensType): string => `Usando uma lente ${lens.replace(/_/g, ' ')}.`;
-const getSensorDescription = (sensor: SensorType): string => `Com um sensor ${sensor.replace(/_/g, ' ')}.`;
 
 const getCameraAngleDescription = (angle: CameraAngle): string => {
     const descriptions: Record<CameraAngle, string> = {
-        'eye_level': 'A câmera está no nível dos olhos do sujeito, criando uma perspectiva neutra e direta.',
-        'shoulder_level': 'A câmera está no nível dos ombros do sujeito, uma perspectiva comum e ligeiramente elevada.',
-        'hip_level': 'A câmera está posicionada na altura do quadril, frequentemente usada para enquadrar ações ou posturas.',
-        'knee_level': 'A câmera está no nível dos joelhos, útil para capturar movimento ou dar uma sensação de superioridade ao sujeito.',
-        'ground_level': 'A câmera está no chão, olhando para cima, para uma perspectiva dramática e exagerada.',
-        'low_angle': 'Um ângulo baixo (contrapicada), com a câmera olhando para cima, fazendo o sujeito parecer poderoso e imponente.',
-        'high_angle': 'Um ângulo alto (picada), com a câmera olhando para baixo, fazendo o sujeito parecer vulnerável ou pequeno.',
-        'dutch_angle': 'Um ângulo holandês, com a câmera inclinada para criar uma sensação de desorientação ou tensão.',
-        'over_the_shoulder': 'Um plano sobre o ombro (OTS), mostrando a cena da perspectiva de trás de um personagem.',
-        'over_the_hip': 'Um plano sobre o quadril, similar ao OTS, mas de uma posição mais baixa.',
-        'establishing_shot': 'Um plano de estabelecimento, mostrando a localização geral antes de focar nos detalhes.',
-        'extreme_wide_shot': 'Um plano geral extremo (EWS), onde o sujeito é pequeno em um vasto cenário.',
-        'wide_shot': 'Um plano geral (WS), mostrando o sujeito por inteiro, com amplo espaço ao redor.',
-        'full_shot': 'Um plano inteiro (FS), enquadrando o sujeito da cabeça aos pés.',
-        'medium_wide_shot': 'Um plano americano (MWS), enquadrando dos joelhos para cima.',
-        'cowboy_shot': 'Um plano cowboy, enquadrando do meio da coxa para cima, clássico de westerns.',
-        'medium_shot': 'Um plano médio (MS), da cintura para cima, equilibrando sujeito e cenário.',
-        'medium_close_up': 'Um plano médio próximo (MCU), do peito para cima, focando mais nas expressões.',
-        'close_up': 'Um primeiro plano (CU), focado no rosto para capturar emoções intensas.',
-        'extreme_close_up': 'Um primeiríssimo plano (ECU), focando em um detalhe específico, como os olhos.',
-        'pov_shot': 'Um plano de ponto de vista (POV), mostrando a cena através dos olhos de um personagem.',
-        'birds_eye_view': 'Uma visão de pássaro (top-down), diretamente de cima, como um mapa.',
-        'aerial_shot': 'Um plano aéreo, capturado de grande altura (drone, helicóptero) para mostrar a escala.',
-        'arc_shot': 'Um plano em arco, onde a câmera se move em um arco ao redor do sujeito.',
-        'dolly_zoom': 'Um dolly zoom (efeito Vertigo), onde a câmera se move e o zoom muda simultaneamente, distorcendo a perspectiva.'
+        'cenital': 'Ângulo Cenital (visão de pássaro), a câmera aponta diretamente para baixo, de cima.',
+        'picado': 'Ângulo Picado (high angle), a câmera está acima do sujeito, olhando para baixo, fazendo-o parecer menor ou vulnerável.',
+        'normal': 'Ângulo Normal (nível do olho), a câmera está na mesma altura do sujeito, criando uma perspectiva neutra.',
+        'contrapicado': 'Ângulo Contrapicado (low angle), a câmera está abaixo do sujeito, olhando para cima, fazendo-o parecer poderoso ou imponente.',
+        'nadir': 'Ângulo Nadir (visão de minhoca), a câmera está no chão, apontando diretamente para cima.',
+        'frontal': 'Ângulo Frontal, a câmera encara o sujeito de frente.',
+        'three_quarter_front': 'Ângulo de Três Quartos Frontal, a câmera está a 45 graus do sujeito.',
+        'profile': 'Ângulo de Perfil, a câmera captura o lado do sujeito.',
+        'three_quarter_rear': 'Ângulo de Três Quartos Traseiro, a câmera está a 135 graus do sujeito, mostrando mais as costas.',
+        'rear': 'Ângulo Traseiro, a câmera captura o sujeito de costas.',
+        'establishing_shot': 'Plano de Estabelecimento, mostrando a localização geral antes de focar nos detalhes.',
+        'extreme_wide_shot': 'Plano Geral Extremo (EWS), onde o sujeito é pequeno em um vasto cenário.',
+        'wide_shot': 'Plano Geral (WS), mostrando o sujeito por inteiro, com amplo espaço ao redor.',
+        'full_shot': 'Plano Inteiro (FS), enquadrando o sujeito da cabeça aos pés.',
+        'medium_wide_shot': 'Plano Americano (MWS), enquadrando dos joelhos para cima.',
+        'cowboy_shot': 'Plano Cowboy, enquadrando do meio da coxa para cima, clássico de westerns.',
+        'medium_shot': 'Plano Médio (MS), da cintura para cima, equilibrando sujeito e cenário.',
+        'medium_close_up': 'Plano Médio Próximo (MCU), do peito para cima, focando mais nas expressões.',
+        'close_up': 'Primeiro Plano (CU), focado no rosto para capturar emoções intensas.',
+        'extreme_close_up': 'Primeiríssimo Plano (ECU), focando em um detalhe específico, como os olhos.',
+        'pov_shot': 'Ponto de Vista (POV), mostrando a cena através dos olhos de um personagem.',
+        'dutch_angle': 'Ângulo Holandês, com a câmera inclinada para criar uma sensação de desorientação.',
+        'over_the_shoulder': 'Sobre o Ombro (OTS), mostrando a cena da perspectiva de trás de um personagem.',
+        'arc_shot': 'Plano em Arco, onde a câmera se move em um arco ao redor do sujeito.',
+        'dolly_zoom': 'Dolly Zoom (efeito Vertigo), onde a câmera se move e o zoom muda simultaneamente, distorcendo a perspectiva.'
     };
     return descriptions[angle] || '';
 };
@@ -472,7 +471,6 @@ export const photorealisticGeneration = async (request: PhotorealisticRequest, p
         finalPrompt += `\n- **Câmera:** Capturado com ${getCameraBodyDescription(request.camera.cameraBody)}.`;
         finalPrompt += `\n- **Ângulo da Câmera:** ${getCameraAngleDescription(request.camera.cameraAngle)}.`;
         finalPrompt += `\n- **Lente:** ${getLensDescription(request.camera.lens)}.`;
-        finalPrompt += `\n- **Sensor:** ${getSensorDescription(request.camera.sensor)}.`;
         finalPrompt += `\n- **Parâmetros:** Abertura ${request.camera.aperture}, Velocidade do Obturador ${request.camera.shutterSpeed}, ISO ${request.camera.iso}.`;
         if(request.camera.lensDistortion !== 'none') finalPrompt += `\n- **Distorção da Lente:** Incluir distorção do tipo ${request.camera.lensDistortion}.`;
         if(request.camera.chromaticAberration !== 'none') finalPrompt += `\n- **Aberração Cromática:** Incluir ${request.camera.chromaticAberration} aberração cromática nas bordas de alto contraste.`;

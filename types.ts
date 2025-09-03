@@ -57,7 +57,7 @@ export type LightSource = 'natural_daylight' | 'golden_hour_sun' | 'studio_flash
 export type TimeOfDay = 'amanhecer' | 'meio-dia' | 'por_do_sol' | 'hora_azul' | 'noite';
 export type LensType = string;
 export type SensorType = string;
-export type CameraAngle = 'eye_level' | 'shoulder_level' | 'hip_level' | 'knee_level' | 'ground_level' | 'low_angle' | 'high_angle' | 'dutch_angle' | 'over_the_shoulder' | 'over_the_hip' | 'establishing_shot' | 'extreme_wide_shot' | 'wide_shot' | 'full_shot' | 'medium_wide_shot' | 'cowboy_shot' | 'medium_shot' | 'medium_close_up' | 'close_up' | 'extreme_close_up' | 'pov_shot' | 'birds_eye_view' | 'aerial_shot' | 'arc_shot' | 'dolly_zoom';
+export type CameraAngle = 'cenital' | 'picado' | 'normal' | 'contrapicado' | 'nadir' | 'frontal' | 'three_quarter_front' | 'profile' | 'three_quarter_rear' | 'rear' | 'establishing_shot' | 'extreme_wide_shot' | 'wide_shot' | 'full_shot' | 'medium_wide_shot' | 'cowboy_shot' | 'medium_shot' | 'medium_close_up' | 'close_up' | 'extreme_close_up' | 'pov_shot' | 'dutch_angle' | 'over_the_shoulder' | 'arc_shot' | 'dolly_zoom';
 export type PhotographicStyle = 'nenhum' | 'fotografia_de_rua' | 'moda_editorial' | 'retrato_natural' | 'glamour_hollywood' | 'lifestyle' | 'cinematografico';
 
 export type FilmStock = 'none' | 'kodak_portra_400' | 'fuji_velvia_50' | 'ilford_hp5_400' | 'kodak_ektar_100' | 'cinestill_800t' | 'polaroid_600';

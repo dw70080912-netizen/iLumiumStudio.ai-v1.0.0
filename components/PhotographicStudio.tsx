@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import type { ConsistencyProfile, PhotorealisticRequest, TimeOfDay, LightSource, LensType, SensorType, PhotographicStyle, UploadedImage, FilmStock, PhotoDefects, CameraAngle } from '../types';
 import { StudioIcon, SparklesIcon, UploadIcon, XMarkIcon, LightBulbIcon, CameraIcon, ClipboardCopyIcon, ArrowPathIcon } from './icons';
 import { getCameraScenePreview, analyzeImageStyle } from '../services/geminiService';
+import { Tooltip } from './Tooltip';
 
 interface PhotographicStudioProps {
     profiles: ConsistencyProfile[];
@@ -36,21 +37,21 @@ const SHUTTER_SPEED_VALUES = ["30s", "15s", "8s", "4s", "2s", "1s", "1/15s", "1/
 
 const CAMERA_ANGLES = [
     {
-        group: 'Nível/Altura', angles: [
-            { id: 'eye_level', name: 'Nível do Olho' },
-            { id: 'shoulder_level', name: 'Nível do Ombro' },
-            { id: 'hip_level', name: 'Nível do Quadril' },
-            { id: 'knee_level', name: 'Nível do Joelho' },
-            { id: 'ground_level', name: 'Nível do Chão' },
+        group: 'Angulação Vertical', angles: [
+            { id: 'cenital', name: 'Cenital (Visão de Pássaro)' },
+            { id: 'picado', name: 'Picado (High Angle)' },
+            { id: 'normal', name: 'Normal (Nível do Olho)' },
+            { id: 'contrapicado', name: 'Contrapicado (Low Angle)' },
+            { id: 'nadir', name: 'Nadir (Visão de Minhoca)' },
         ]
     },
     {
-        group: 'Angulação', angles: [
-            { id: 'low_angle', name: 'Ângulo Baixo (Contrapicada)' },
-            { id: 'high_angle', name: 'Ângulo Alto (Picada)' },
-            { id: 'dutch_angle', name: 'Ângulo Holandês (Inclinado)' },
-            { id: 'over_the_shoulder', name: 'Sobre o Ombro (OTS)' },
-            { id: 'over_the_hip', name: 'Sobre o Quadril' },
+        group: 'Angulação Horizontal', angles: [
+            { id: 'frontal', name: 'Frontal' },
+            { id: 'three_quarter_front', name: 'Três Quartos Frontal' },
+            { id: 'profile', name: 'Perfil' },
+            { id: 'three_quarter_rear', name: 'Três Quartos Traseiro' },
+            { id: 'rear', name: 'Traseiro (De Costas)' },
         ]
     },
     {
@@ -70,8 +71,8 @@ const CAMERA_ANGLES = [
     {
         group: 'Especial/Perspectiva', angles: [
             { id: 'pov_shot', name: 'Ponto de Vista (POV)' },
-            { id: 'birds_eye_view', name: 'Visão de Pássaro (Top-down)' },
-            { id: 'aerial_shot', name: 'Aéreo' },
+            { id: 'dutch_angle', name: 'Ângulo Holandês (Inclinado)' },
+            { id: 'over_the_shoulder', name: 'Sobre o Ombro (OTS)' },
             { id: 'arc_shot', name: 'Plano em Arco' },
             { id: 'dolly_zoom', name: 'Dolly Zoom (Efeito Vertigo)' },
         ]
@@ -357,7 +358,7 @@ const INITIAL_REQUEST_STATE: PhotorealisticRequest = {
         chromaticAberration: 'none',
         lensTilt: 'none',
         lensShift: 'none',
-        cameraAngle: 'eye_level',
+        cameraAngle: 'normal',
     },
     depthOfField: {
         focusPoint: 'Olhos do sujeito',
@@ -402,9 +403,12 @@ const INITIAL_REQUEST_STATE: PhotorealisticRequest = {
     },
 };
 
-const FormField: React.FC<{ label: string, description: string, children: React.ReactNode, sub?: boolean }> = ({ label, description, children, sub=false }) => (
+const FormField: React.FC<{ label: string, description: string, tooltipText?: string, children: React.ReactNode, sub?: boolean }> = ({ label, description, tooltipText, children, sub=false }) => (
     <div className={sub ? "pt-3" : "pt-3"}>
-        <label className={`block font-bold text-white mb-1 ${sub ? 'text-xs' : 'text-sm'}`}>{label}</label>
+        <div className="flex items-center gap-2 mb-1">
+            <label className={`block font-bold text-white ${sub ? 'text-xs' : 'text-sm'}`}>{label}</label>
+            {tooltipText && <Tooltip text={tooltipText} />}
+        </div>
         <p className="text-xs text-gray-400 mb-2">{description}</p>
         {children}
     </div>
@@ -717,395 +721,369 @@ export const PhotographicStudio: React.FC<PhotographicStudioProps> = ({ profiles
 
             <form onSubmit={handleSubmit} className="space-y-4 flex-grow overflow-y-auto pr-2 -mr-2">
                 
-                <AccordionItem title="1. Sujeito e Cenário" defaultOpen>
-                    <div className="space-y-3">
-                         <FormField label="Modo de Operação" description="Escolha entre controle manual total ou deixe a IA escolher o melhor equipamento para você.">
-                            <label className="flex items-center p-3 bg-gray-700 rounded-lg cursor-pointer hover:bg-opacity-75 transition-colors">
-                                <input 
-                                    type="checkbox" 
-                                    checked={request.autoEquip}
-                                    onChange={(e) => handleInputChange('autoEquip', e.target.checked)}
-                                    className="form-checkbox h-5 w-5 bg-gray-900 border-gray-600 rounded text-blue-500 focus:ring-blue-500"
-                                />
-                                <span className="ml-3">
-                                    <span className="font-bold text-white">Equipagem Automática (Modo Diretor)</span>
-                                    <span className="block text-xs text-gray-400">A IA escolhe a melhor câmera, lente e iluminação para seu prompt.</span>
-                                </span>
-                            </label>
-                        </FormField>
+                <div className="p-2 bg-gray-900/50 rounded-lg">
+                    <h3 className="text-md font-semibold text-blue-300 mb-2">1. Concepção da Cena</h3>
+                    <AccordionItem title="Sujeito e Cenário" defaultOpen>
+                        <div className="space-y-3">
+                            <FormField label="Modo de Operação" description="Escolha entre controle manual total ou deixe a IA escolher o melhor equipamento para você.">
+                                <label className="flex items-center p-3 bg-gray-700 rounded-lg cursor-pointer hover:bg-opacity-75 transition-colors">
+                                    <input
+                                        type="checkbox"
+                                        checked={request.autoEquip}
+                                        onChange={(e) => handleInputChange('autoEquip', e.target.checked)}
+                                        className="form-checkbox h-5 w-5 bg-gray-900 border-gray-600 rounded text-blue-500 focus:ring-blue-500"
+                                    />
+                                    <span className="ml-3">
+                                        <span className="font-bold text-white">Equipagem Automática (Modo Diretor)</span>
+                                        <span className="block text-xs text-gray-400">A IA escolhe a melhor câmera, lente e iluminação para seu prompt.</span>
+                                    </span>
+                                </label>
+                            </FormField>
 
-                        <label className={`w-full flex flex-col items-center justify-center p-4 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${baseImages.length > 0 ? 'border-blue-500' : 'border-gray-600 hover:bg-gray-700'}`}>
-                            <UploadIcon className="w-8 h-8 text-gray-400 mb-2" />
-                            <span className="text-sm text-gray-400 text-center">
-                                {baseImages.length > 0 
-                                    ? `${baseImages.length} imagem(ns) carregada(s). Clique para substituir.`
-                                    : 'Opcional: Enviar imagem(ns) base para editar'
-                                }
-                            </span>
-                            <input type="file" multiple accept={ACCEPTED_IMAGE_TYPES.join(',')} onChange={handleFileChange} className="hidden" />
-                        </label>
-                        {baseImages.length > 0 && (
-                            <div className="space-y-3">
-                                <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-                                    {baseImages.map((image, index) => (
-                                        <div key={index} className="relative group">
-                                            <img src={`data:${image.mimeType};base64,${image.base64}`} alt={`Base ${index + 1}`} className="w-full h-20 object-cover rounded-lg" />
+                            <label className={`w-full flex flex-col items-center justify-center p-4 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${baseImages.length > 0 ? 'border-blue-500' : 'border-gray-600 hover:bg-gray-700'}`}>
+                                <UploadIcon className="w-8 h-8 text-gray-400 mb-2" />
+                                <span className="text-sm text-gray-400 text-center">
+                                    {baseImages.length > 0
+                                        ? `${baseImages.length} imagem(ns) carregada(s). Clique para substituir.`
+                                        : 'Opcional: Enviar imagem(ns) base para editar'
+                                    }
+                                </span>
+                                <input type="file" multiple accept={ACCEPTED_IMAGE_TYPES.join(',')} onChange={handleFileChange} className="hidden" />
+                            </label>
+                            {baseImages.length > 0 && (
+                                <div className="space-y-3">
+                                    <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                                        {baseImages.map((image, index) => (
+                                            <div key={index} className="relative group">
+                                                <img src={`data:${image.mimeType};base64,${image.base64}`} alt={`Base ${index + 1}`} className="w-full h-20 object-cover rounded-lg" />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setBaseImages(prev => prev.filter((_, i) => i !== index))}
+                                                    className="absolute top-1 right-1 bg-black bg-opacity-50 p-1 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500"
+                                                    aria-label="Remover imagem"
+                                                >
+                                                    <XMarkIcon className="w-3 h-3" />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="p-2 bg-gray-700 rounded-md">
+                                        <label className="text-sm font-bold text-white mb-2 block text-center">Modo da Imagem Base:</label>
+                                        <div className="flex items-center p-1 bg-gray-900 rounded-full">
                                             <button
                                                 type="button"
-                                                onClick={() => setBaseImages(prev => prev.filter((_, i) => i !== index))}
-                                                className="absolute top-1 right-1 bg-black bg-opacity-50 p-1 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500"
-                                                aria-label="Remover imagem"
+                                                onClick={() => handleBaseImageModeChange('consistency')}
+                                                className={`flex-1 text-center px-3 py-1 text-xs rounded-full transition-colors ${request.baseImageMode === 'consistency' ? 'bg-blue-600 text-white' : 'text-gray-400'}`}
                                             >
-                                                <XMarkIcon className="w-3 h-3" />
+                                                Manter Sujeito (Edição)
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleBaseImageModeChange('reference')}
+                                                className={`flex-1 text-center px-3 py-1 text-xs rounded-full transition-colors ${request.baseImageMode === 'reference' ? 'bg-blue-600 text-white' : 'text-gray-400'}`}
+                                            >
+                                                Referência (Inspiração)
                                             </button>
                                         </div>
-                                    ))}
-                                </div>
-                                 <div className="p-2 bg-gray-700 rounded-md">
-                                    <label className="text-sm font-bold text-white mb-2 block text-center">Modo da Imagem Base:</label>
-                                    <div className="flex items-center p-1 bg-gray-900 rounded-full">
-                                        <button
-                                            type="button"
-                                            onClick={() => handleBaseImageModeChange('consistency')}
-                                            className={`flex-1 text-center px-3 py-1 text-xs rounded-full transition-colors ${request.baseImageMode === 'consistency' ? 'bg-blue-600 text-white' : 'text-gray-400'}`}
-                                        >
-                                            Manter Sujeito (Edição)
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => handleBaseImageModeChange('reference')}
-                                            className={`flex-1 text-center px-3 py-1 text-xs rounded-full transition-colors ${request.baseImageMode === 'reference' ? 'bg-blue-600 text-white' : 'text-gray-400'}`}
-                                        >
-                                            Referência (Inspiração)
-                                        </button>
                                     </div>
                                 </div>
+                            )}
+                            <textarea value={request.prompt} onChange={(e) => handleInputChange('prompt', e.target.value)} placeholder="Ação Principal (Ex: um retrato de um velho marinheiro)" rows={2} className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none" />
+                            <textarea value={request.environment} onChange={(e) => handleInputChange('environment', e.target.value)} placeholder="Ambiente e Cenário (Ex: em um barco de pesca antigo)" rows={3} className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none" />
+                            <div className="relative">
+                                <SparklesIcon className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                                <SelectInput value={request.profileId || ''} onChange={(e) => handleInputChange('profileId', e.target.value)}>
+                                    <option value="">Usar um Perfil de Consistência (Opcional)</option>
+                                    {profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                </SelectInput>
                             </div>
-                        )}
-                        <textarea value={request.prompt} onChange={(e) => handleInputChange('prompt', e.target.value)} placeholder="Ação Principal (Ex: um retrato de um velho marinheiro)" rows={2} className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none" />
-                        <textarea value={request.environment} onChange={(e) => handleInputChange('environment', e.target.value)} placeholder="Ambiente e Cenário (Ex: em um barco de pesca antigo)" rows={3} className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none" />
-                        <div className="relative">
-                            <SparklesIcon className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                             <SelectInput value={request.profileId || ''} onChange={(e) => handleInputChange('profileId', e.target.value)}>
-                                <option value="">Usar um Perfil de Consistência (Opcional)</option>
-                                {profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                            </SelectInput>
-                        </div>
-                        {request.profileId && (
-                            <div className="mt-2 p-2 bg-gray-700 rounded-md">
-                                <div className="flex items-center justify-between">
-                                <label className="text-sm font-bold text-white">Modo de Perfil:</label>
-                                <div className="flex items-center p-1 bg-gray-900 rounded-full">
-                                    <button
-                                    type="button"
-                                    onClick={() => handleInputChange('useProfileForConsistency', true)}
-                                    className={`px-3 py-1 text-xs rounded-full transition-colors ${request.useProfileForConsistency ? 'bg-blue-600 text-white' : 'text-gray-400'}`}
-                                    >
-                                    Consistência
-                                    </button>
-                                    <button
-                                    type="button"
-                                    onClick={() => handleInputChange('useProfileForConsistency', false)}
-                                    className={`px-3 py-1 text-xs rounded-full transition-colors ${!request.useProfileForConsistency ? 'bg-blue-600 text-white' : 'text-gray-400'}`}
-                                    >
-                                    Referência
-                                    </button>
+                            {request.profileId && (
+                                <div className="mt-2 p-2 bg-gray-700 rounded-md">
+                                    <div className="flex items-center justify-between">
+                                    <label className="text-sm font-bold text-white">Modo de Perfil:</label>
+                                    <div className="flex items-center p-1 bg-gray-900 rounded-full">
+                                        <button
+                                        type="button"
+                                        onClick={() => handleInputChange('useProfileForConsistency', true)}
+                                        className={`px-3 py-1 text-xs rounded-full transition-colors ${request.useProfileForConsistency ? 'bg-blue-600 text-white' : 'text-gray-400'}`}
+                                        >
+                                        Consistência
+                                        </button>
+                                        <button
+                                        type="button"
+                                        onClick={() => handleInputChange('useProfileForConsistency', false)}
+                                        className={`px-3 py-1 text-xs rounded-full transition-colors ${!request.useProfileForConsistency ? 'bg-blue-600 text-white' : 'text-gray-400'}`}
+                                        >
+                                        Referência
+                                        </button>
+                                    </div>
+                                    </div>
+                                    <p className="text-xs text-gray-400 mt-1 text-center">
+                                    {request.useProfileForConsistency
+                                        ? 'Preserva a identidade exata do personagem/objeto do perfil.'
+                                        : 'Usa o perfil apenas como inspiração de estilo e aparência.'}
+                                    </p>
                                 </div>
-                                </div>
-                                <p className="text-xs text-gray-400 mt-1 text-center">
-                                {request.useProfileForConsistency
-                                    ? 'Preserva a identidade exata do personagem/objeto do perfil.'
-                                    : 'Usa o perfil apenas como inspiração de estilo e aparência.'}
-                                </p>
-                            </div>
-                        )}
-                    </div>
-                </AccordionItem>
-                 <AccordionItem title="2. Fotografia Conceitual e Narrativa">
-                    <FormField label="Conceito Principal" description="Descreva ideias abstratas, emoções, sonhos, metáforas ou sentidos.">
-                       <textarea 
-                           value={request.conceptual.prompt} 
-                           onChange={(e) => handleInputChange('conceptual.prompt', e.target.value)}
-                           placeholder="Ex: uma foto que represente a sensação de nostalgia, simular uma memória de infância desfocada, um retrato que mostre a 'aura' de uma pessoa."
-                           rows={4}
-                           className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-sm text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none" />
-                        <div className="flex flex-wrap gap-1 mt-2">
-                           {(['Simular um sonho', 'Visão de uma abelha (UV)', 'Fotografar o sentimento de solidão', 'Uma chama congelada em gelo']).map(preset => (
-                               <button type="button" key={preset} onClick={() => handleInputChange('conceptual.prompt', preset)} className="text-xs bg-gray-600 px-2 py-1 rounded-md hover:bg-gray-500 transition-colors">
-                                   {preset}
-                               </button>
-                           ))}
-                       </div>
-                    </FormField>
-                    <FormField label="Sequência Narrativa" description="Se gerar múltiplas imagens, defina como elas se conectam entre si.">
-                        <SelectInput value={request.conceptual.sequence.type} onChange={(e) => handleInputChange('conceptual.sequence.type', e.target.value)}>
-                            <option value="none">Nenhuma Sequência</option>
-                            <option value="timeline">Linha do Tempo (Evolução)</option>
-                            <option value="style_variation">Variação de Estilo</option>
-                            <option value="psychological_states">Estados Psicológicos</option>
-                        </SelectInput>
-                        {request.conceptual.sequence.type !== 'none' && (
-                             <textarea 
-                                value={request.conceptual.sequence.description} 
-                                onChange={(e) => handleInputChange('conceptual.sequence.description', e.target.value)}
-                                placeholder="Descreva a progressão da sequência. Ex: 'Anos 1920, anos 1980, ano 2100'"
-                                rows={2}
-                                className="mt-2 w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-sm text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none" />
-                        )}
-                    </FormField>
-                </AccordionItem>
-                <AccordionItem title="3. Iluminação">
-                    <div className={isAutoEquip ? 'opacity-40 pointer-events-none' : ''}>
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-                            <SelectInput value={request.lighting.timeOfDay} onChange={(e) => handleInputChange('lighting.timeOfDay', e.target.value as TimeOfDay)} disabled={isAutoEquip}>
-                                <optgroup label="Hora do Dia">
-                                    <option value="amanhecer">Amanhecer</option>
-                                    <option value="meio-dia">Meio-dia</option>
-                                    <option value="por_do_sol">Pôr do Sol</option>
-                                    <option value="hora_azul">Hora Azul</option>
-                                    <option value="noite">Noite</option>
-                                </optgroup>
-                            </SelectInput>
-                            <SelectInput value={request.lighting.source} onChange={(e) => handleInputChange('lighting.source', e.target.value as LightSource)} disabled={isAutoEquip}>
-                                <optgroup label="Fonte Principal">
-                                    <option value="natural_daylight">Luz Natural</option>
-                                    <option value="golden_hour_sun">Sol (Golden Hour)</option>
-                                    <option value="studio_flash">Flash de Estúdio</option>
-                                    <option value="ring_light">Luz de Anel</option>
-                                    <option value="neon_city">Neon de Cidade</option>
-                                    <option value="dramatic_spotlight">Holofote Dramático</option>
-                                    <option value="tungsten_bulb">Lâmpada de Tungstênio</option>
-                                    <option value="fluorescent_light">Luz Fluorescente</option>
-                                    <option value="led_panel">Painel de LED</option>
-                                    <option value="candlelight">Luz de Vela</option>
-                                </optgroup>
-                            </SelectInput>
-                            <SelectInput value={request.lighting.angle} onChange={(e) => handleInputChange('lighting.angle', e.target.value)} disabled={isAutoEquip}>
-                                <optgroup label="Ângulo da Luz">
-                                    <option value="frontal">Frontal</option>
-                                    <option value="lateral">Lateral</option>
-                                    <option value="contra-luz">Contra-luz</option>
-                                    <option value="superior">Superior</option>
-                                </optgroup>
-                            </SelectInput>
-                            <SelectInput value={request.lighting.quality} onChange={(e) => handleInputChange('lighting.quality', e.target.value)} disabled={isAutoEquip}>
-                                <optgroup label="Qualidade da Luz">
-                                    <option value="difusa">Difusa (Suave)</option>
-                                    <option value="dura">Dura (Contraste)</option>
-                                </optgroup>
-                            </SelectInput>
-                            <SelectInput value={request.lighting.intensity} onChange={(e) => handleInputChange('lighting.intensity', e.target.value)} disabled={isAutoEquip}>
-                                <optgroup label="Intensidade">
-                                    <option value="fraca">Fraca</option>
-                                    <option value="media">Média</option>
-                                    <option value="forte">Forte</option>
-                                </optgroup>
-                            </SelectInput>
-                            <div className="flex items-center justify-around">
-                                <CheckboxInput checked={request.lighting.fillLight} onChange={(e) => handleInputChange('lighting.fillLight', e.target.checked)} label="Preenchimento" disabled={isAutoEquip}/>
-                                <CheckboxInput checked={request.lighting.rimLight} onChange={(e) => handleInputChange('lighting.rimLight', e.target.checked)} label="Contorno" disabled={isAutoEquip}/>
-                            </div>
+                            )}
                         </div>
-                    </div>
-                </AccordionItem>
-                 <AccordionItem title="4. Câmera e Lente">
-                     <div className={isAutoEquip ? 'opacity-40 pointer-events-none' : ''}>
-                        <div className="grid grid-cols-1 gap-3">
-                             <SelectInput value={request.camera.cameraBody} onChange={(e) => handleInputChange('camera.cameraBody', e.target.value as string)} disabled={isAutoEquip}>
-                                {CAMERA_DB.map(group => (
-                                    <optgroup key={group.brand} label={group.brand}>
-                                        {group.cameras.map(camera => <option key={camera.id} value={camera.id}>{camera.name}</option>)}
-                                    </optgroup>
-                                ))}
-                            </SelectInput>
-                            <SelectInput value={request.camera.cameraAngle} onChange={(e) => handleInputChange('camera.cameraAngle', e.target.value as CameraAngle)} disabled={isAutoEquip}>
-                                {CAMERA_ANGLES.map(group => (
-                                    <optgroup key={group.group} label={group.group}>
-                                        {group.angles.map(angle => <option key={angle.id} value={angle.id}>{angle.name}</option>)}
-                                    </optgroup>
-                                ))}
-                            </SelectInput>
-                            <SelectInput value={request.camera.lens} onChange={(e) => handleInputChange('camera.lens', e.target.value as LensType)} disabled={isSmartphone || isAutoEquip}>
-                                {LENS_DB.map(group => (
-                                    <optgroup key={group.brand} label={group.brand}>
-                                        {group.lenses.map(lens => <option key={lens.id} value={lens.id}>{lens.name}</option>)}
-                                    </optgroup>
-                                ))}
-                            </SelectInput>
-                             <SelectInput value={request.camera.sensor} onChange={(e) => handleInputChange('camera.sensor', e.target.value as SensorType)} disabled={isSmartphone || isAutoEquip}>
-                            {SENSOR_DB.map(group => (
-                                    <optgroup key={group.type} label={group.type}>
-                                        {group.sensors.map(sensor => <option key={sensor.id} value={sensor.id}>{sensor.name}</option>)}
-                                    </optgroup>
-                                ))}
-                            </SelectInput>
-                             <div className="grid grid-cols-2 gap-2">
-                                <SelectInput value={request.camera.aperture} onChange={(e) => handleInputChange('camera.aperture', e.target.value)} disabled={isSmartphone || isAutoEquip}>
-                                    <optgroup label="Abertura (Desfoque)">
-                                        {APERTURE_VALUES.map(f => <option key={f} value={f}>{f}</option>)}
-                                    </optgroup>
-                                </SelectInput>
-                                <SelectInput value={request.camera.shutterSpeed} onChange={(e) => handleInputChange('camera.shutterSpeed', e.target.value)} disabled={isAutoEquip}>
-                                    <optgroup label="Obturador">
-                                        {SHUTTER_SPEED_VALUES.map(speed => <option key={speed} value={speed}>{speed}</option>)}
-                                    </optgroup>
-                                </SelectInput>
-                            </div>
-                            <SelectInput value={request.camera.iso} onChange={(e) => handleInputChange('camera.iso', e.target.value)} disabled={isAutoEquip}>
-                                <optgroup label="ISO (Grão/Ruído)">
-                                    <option value="ISO 50">ISO 50 (Limpo)</option>
-                                    <option value="ISO 100">ISO 100</option>
-                                    <option value="ISO 400">ISO 400</option>
-                                    <option value="ISO 800">ISO 800</option>
-                                    <option value="ISO 1600">ISO 1600 (Grão Leve)</option>
-                                    <option value="ISO 3200">ISO 3200</option>
-                                    <option value="ISO 6400">ISO 6400 (Grão Forte)</option>
-                                </optgroup>
-                            </SelectInput>
-                             <input type="text" value={request.depthOfField.focusPoint} onChange={(e) => handleInputChange('depthOfField.focusPoint', e.target.value)} placeholder="Ponto de Foco (ex: olhos do sujeito)" className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:outline-none" disabled={isAutoEquip} />
-                            <div className="grid grid-cols-2 gap-2">
-                                <SelectInput value={request.depthOfField.bokehQuality} onChange={(e) => handleInputChange('depthOfField.bokehQuality', e.target.value)} disabled={isAutoEquip}>
-                                    <optgroup label="Qualidade do Bokeh">
-                                        <option value="cremoso">Cremoso e Suave</option>
-                                        <option value="nervoso">Nervoso e Distraído</option>
-                                        <option value="vintage_remolino">Vintage (Swirly)</option>
-                                    </optgroup>
-                                </SelectInput>
-                                <SelectInput value={request.depthOfField.bokehIntensity} onChange={(e) => handleInputChange('depthOfField.bokehIntensity', e.target.value)} disabled={isAutoEquip}>
-                                    <optgroup label="Intensidade do Bokeh">
-                                        <option value="subtle">Sutil</option>
-                                        <option value="medium">Média</option>
-                                        <option value="strong">Forte</option>
-                                    </optgroup>
-                                </SelectInput>
-                            </div>
-                        </div>
-                    </div>
-                 </AccordionItem>
-                <AccordionItem title="5. Filme e Imperfeições">
-                    <div className="space-y-3">
-                        <SelectInput value={request.film.stock} onChange={(e) => handleInputChange('film.stock', e.target.value as FilmStock)}>
-                            <optgroup label="Simulação de Filme">
-                                <option value="none">Nenhum (Digital Limpo)</option>
-                                <option value="kodak_portra_400">Kodak Portra 400</option>
-                                <option value="fuji_velvia_50">Fuji Velvia 50</option>
-                                <option value="ilford_hp5_400">Ilford HP5 400 (P&B)</option>
-                                <option value="kodak_ektar_100">Kodak Ektar 100</option>
-                                <option value="cinestill_800t">CineStill 800T</option>
-                                <option value="polaroid_600">Polaroid 600</option>
-                            </optgroup>
-                        </SelectInput>
-                        <div className="grid grid-cols-2 gap-4">
-                             <SelectInput value={request.film.defects.filmGrain} onChange={(e) => handleInputChange('film.defects.filmGrain', e.target.value)}>
-                                <optgroup label="Granulação de Filme">
-                                    <option value="none">Nenhuma</option>
-                                    <option value="fine">Fina</option>
-                                    <option value="medium">Média</option>
-                                    <option value="heavy">Pesada</option>
-                                </optgroup>
-                            </SelectInput>
-                            <SelectInput value={request.film.defects.lensFlare} onChange={(e) => handleInputChange('film.defects.lensFlare', e.target.value)}>
-                                <optgroup label="Lens Flare">
-                                    <option value="none">Nenhum</option>
-                                    <option value="subtle">Sutil</option>
-                                    <option value="dramatic">Dramático</option>
-                                    <option value="imperfect">Imperfeito</option>
-                                </optgroup>
-                            </SelectInput>
-                             <SelectInput value={request.film.defects.cameraShake} onChange={(e) => handleInputChange('film.defects.cameraShake', e.target.value)}>
-                                <optgroup label="Tremido da Câmera">
-                                    <option value="none">Nenhum</option>
-                                    <option value="slight">Leve</option>
-                                    <option value="heavy">Forte (Movimento)</option>
-                                </optgroup>
-                            </SelectInput>
-                            <div className="flex items-center justify-around flex-wrap gap-2">
-                                <CheckboxInput checked={request.film.defects.lightLeaks} onChange={(e) => handleInputChange('film.defects.lightLeaks', e.target.checked)} label="Vazamento de Luz"/>
-                                <CheckboxInput checked={request.film.defects.dustAndScratches} onChange={(e) => handleInputChange('film.defects.dustAndScratches', e.target.checked)} label="Poeira/Riscos"/>
-                                <CheckboxInput checked={request.film.defects.sensorSpots} onChange={(e) => handleInputChange('film.defects.sensorSpots', e.target.checked)} label="Manchas no Sensor"/>
-                                <CheckboxInput checked={request.film.defects.negativeScratches} onChange={(e) => handleInputChange('film.defects.negativeScratches', e.target.checked)} label="Riscos no Negativo"/>
-                            </div>
-                        </div>
-                    </div>
-                </AccordionItem>
-                 <AccordionItem title="6. Atmosfera e Física">
-                    <FormField label="Efeitos Atmosféricos" description="Adicione efeitos ambientais para criar profundidade e humor na cena.">
-                        <div className="grid grid-cols-2 gap-2">
-                            <SelectInput value={request.atmosphere.type} onChange={(e) => handleInputChange('atmosphere.type', e.target.value)}>
-                                <option value="none">Sem Atmosfera</option>
-                                <option value="fog">Neblina</option>
-                                <option value="mist">Névoa / Bruma</option>
-                                <option value="rain">Chuva</option>
-                                <option value="dust_particles">Partículas de Poeira</option>
-                            </SelectInput>
-                            <SelectInput value={request.atmosphere.density} onChange={(e) => handleInputChange('atmosphere.density', e.target.value)} disabled={request.atmosphere.type === 'none'}>
-                                <option value="light">Leve</option>
-                                <option value="medium">Média</option>
-                                <option value="heavy">Densa / Pesada</option>
-                            </SelectInput>
-                        </div>
-                    </FormField>
-                    <FormField label="Simulação Física (Avançado)" description="Descreva com precisão como a luz e os materiais devem se comportar.">
-                         <textarea 
-                            value={request.atmosphere.lightPhysics} 
-                            onChange={(e) => handleInputChange('atmosphere.lightPhysics', e.target.value)} 
-                            placeholder="Física da Luz (Ex: refração cáustica através de vidro, dispersão subsuperficial na pele, difração da luz em uma teia de aranha)" 
-                            rows={3} 
+                    </AccordionItem>
+                    <AccordionItem title="Fotografia Conceitual e Narrativa">
+                        <FormField label="Conceito Principal" description="Descreva ideias abstratas, emoções, sonhos, metáforas ou sentidos." tooltipText="Use este campo para guiar a IA em temas que não são puramente visuais. A IA tentará traduzir o conceito em uma imagem.">
+                        <textarea
+                            value={request.conceptual.prompt}
+                            onChange={(e) => handleInputChange('conceptual.prompt', e.target.value)}
+                            placeholder="Ex: uma foto que represente a sensação de nostalgia, simular uma memória de infância desfocada, um retrato que mostre a 'aura' de uma pessoa."
+                            rows={4}
                             className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-sm text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none" />
-                        <textarea 
-                            value={request.materialProperties} 
-                            onChange={(e) => handleInputChange('materialProperties', e.target.value)} 
-                            placeholder="Propriedades dos Materiais (Ex: metal com reflexos anisotrópicos, tecido molhado translúcido, madeira com veios visíveis)" 
-                            rows={3} 
-                            className="mt-2 w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-sm text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none" />
-                    </FormField>
-                </AccordionItem>
-                <AccordionItem title="7. Saída e Finalização">
-                     <div className="space-y-3">
-                        <div className="grid grid-cols-2 gap-4">
-                             <div>
-                                <label className="text-xs font-bold text-white block mb-2">Passadas (Qualidade)</label>
-                                <SelectInput value={request.output.steps} onChange={(e) => handleInputChange('output.steps', e.target.value)}>
-                                    <option value="low">Baixa (Rápido)</option>
-                                    <option value="medium">Média (Padrão)</option>
-                                    <option value="high">Alta (Detalhado)</option>
-                                    <option value="ultra">Ultra (Máxima)</option>
-                                </SelectInput>
-                            </div>
-                             <div>
-                                <label className="text-xs font-bold text-white block mb-2">Resolução (Simulada)</label>
-                                <SelectInput value={request.output.resolution} onChange={(e) => handleInputChange('output.resolution', e.target.value)}>
-                                    <option value="hd">HD (720p)</option>
-                                    <option value="qhd">QHD (2K)</option>
-                                    <option value="uhd4k">UHD (4K)</option>
-                                    <option value="uhd8k">UHD (8K)</option>
-                                </SelectInput>
+                            <div className="flex flex-wrap gap-1 mt-2">
+                            {(['Simular um sonho', 'Visão de uma abelha (UV)', 'Fotografar o sentimento de solidão', 'Uma chama congelada em gelo']).map(preset => (
+                                <button type="button" key={preset} onClick={() => handleInputChange('conceptual.prompt', preset)} className="text-xs bg-gray-600 px-2 py-1 rounded-md hover:bg-gray-500 transition-colors">
+                                    {preset}
+                                </button>
+                            ))}
+                        </div>
+                        </FormField>
+                        <FormField label="Sequência Narrativa" description="Se gerar múltiplas imagens, defina como elas se conectam entre si." tooltipText="Esta opção força a IA a criar uma série de imagens que contam uma história ou mostram uma progressão. Requer a geração de 2 ou mais imagens.">
+                            <SelectInput value={request.conceptual.sequence.type} onChange={(e) => handleInputChange('conceptual.sequence.type', e.target.value)}>
+                                <option value="none">Nenhuma Sequência</option>
+                                <option value="timeline">Linha do Tempo (Evolução)</option>
+                                <option value="style_variation">Variação de Estilo</option>
+                                <option value="psychological_states">Estados Psicológicos</option>
+                            </SelectInput>
+                            {request.conceptual.sequence.type !== 'none' && (
+                                <textarea
+                                    value={request.conceptual.sequence.description}
+                                    onChange={(e) => handleInputChange('conceptual.sequence.description', e.target.value)}
+                                    placeholder="Descreva a progressão da sequência. Ex: 'Anos 1920, anos 1980, ano 2100'"
+                                    rows={2}
+                                    className="mt-2 w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-sm text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none" />
+                            )}
+                        </FormField>
+                    </AccordionItem>
+                </div>
+
+                <div className="mt-4 p-2 bg-gray-900/50 rounded-lg">
+                    <h3 className="text-md font-semibold text-blue-300 mb-2">2. Técnica Fotográfica</h3>
+                    <AccordionItem title="Câmera e Lente">
+                        <div className={isAutoEquip ? 'opacity-40 pointer-events-none' : ''}>
+                            <div className="grid grid-cols-1 gap-3">
+                                <FormField label="Corpo da Câmera" description="Selecione o modelo da câmera para simular suas características de cor e sensor." tooltipText="Cada câmera possui uma 'ciência de cor' única. Canon é conhecida por tons de pele agradáveis. Sony por sua nitidez. Fujifilm por suas simulações de filme.">
+                                    <SelectInput value={request.camera.cameraBody} onChange={(e) => handleInputChange('camera.cameraBody', e.target.value as string)} disabled={isAutoEquip}>
+                                        {CAMERA_DB.map(group => (
+                                            <optgroup key={group.brand} label={group.brand}>
+                                                {group.cameras.map(camera => <option key={camera.id} value={camera.id}>{camera.name}</option>)}
+                                            </optgroup>
+                                        ))}
+                                    </SelectInput>
+                                </FormField>
+                                <FormField label="Ângulo da Câmera" description="Define a posição e perspectiva da câmera em relação ao sujeito." tooltipText="Esta é uma das escolhas mais importantes para definir a narrativa da imagem. Ângulos baixos engrandecem, ângulos altos diminuem.">
+                                    <SelectInput value={request.camera.cameraAngle} onChange={(e) => handleInputChange('camera.cameraAngle', e.target.value as CameraAngle)} disabled={isAutoEquip}>
+                                        {CAMERA_ANGLES.map(group => (
+                                            <optgroup key={group.group} label={group.group}>
+                                                {group.angles.map(angle => <option key={angle.id} value={angle.id}>{angle.name}</option>)}
+                                            </optgroup>
+                                        ))}
+                                    </SelectInput>
+                                </FormField>
+                                <FormField label="Lente" description="Selecione a lente para simular sua distância focal e características ópticas." tooltipText="Lentes grande angular (ex: 16mm) distorcem e exageram a perspectiva. Lentes teleobjetiva (ex: 200mm) comprimem o fundo. Lentes 'prime' (ex: 50mm f/1.8) são geralmente mais nítidas.">
+                                    <SelectInput value={request.camera.lens} onChange={(e) => handleInputChange('camera.lens', e.target.value as LensType)} disabled={isSmartphone || isAutoEquip}>
+                                        {LENS_DB.map(group => (
+                                            <optgroup key={group.brand} label={group.brand}>
+                                                {group.lenses.map(lens => <option key={lens.id} value={lens.id}>{lens.name}</option>)}
+                                            </optgroup>
+                                        ))}
+                                    </SelectInput>
+                                </FormField>
+                                <FormField label="Abertura e Foco" description="Controle a profundidade de campo e o desfoque de fundo (bokeh)." tooltipText="Abertura (f-stop) controla a quantidade de luz e a profundidade de campo. Valores baixos (ex: f/1.8) criam um fundo muito desfocado. Valores altos (ex: f/16) mantêm quase tudo em foco.">
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <SelectInput value={request.camera.aperture} onChange={(e) => handleInputChange('camera.aperture', e.target.value)} disabled={isSmartphone || isAutoEquip}>
+                                            <optgroup label="Abertura (Desfoque)">
+                                                {APERTURE_VALUES.map(f => <option key={f} value={f}>{f}</option>)}
+                                            </optgroup>
+                                        </SelectInput>
+                                        <SelectInput value={request.depthOfField.bokehIntensity} onChange={(e) => handleInputChange('depthOfField.bokehIntensity', e.target.value)} disabled={isAutoEquip}>
+                                            <optgroup label="Intensidade do Bokeh">
+                                                <option value="subtle">Sutil</option>
+                                                <option value="medium">Média</option>
+                                                <option value="strong">Forte</option>
+                                            </optgroup>
+                                        </SelectInput>
+                                    </div>
+                                    <input type="text" value={request.depthOfField.focusPoint} onChange={(e) => handleInputChange('depthOfField.focusPoint', e.target.value)} placeholder="Ponto de Foco (ex: olhos do sujeito)" className="mt-2 w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:outline-none" disabled={isAutoEquip} />
+                                </FormField>
                             </div>
                         </div>
-                        <p className="text-xs text-gray-500 mt-1">A IA simula resoluções mais altas com mais detalhes. O tamanho real do arquivo não muda.</p>
-                         <div>
-                            <label className="text-xs font-bold text-white block mb-2">Número de Imagens</label>
-                            <input 
-                                type="number" 
-                                min="1" 
-                                max="4" 
-                                value={request.numberOfImages} 
-                                onChange={(e) => {
-                                    const num = parseInt(e.target.value, 10);
-                                    if(request.conceptual.sequence.type !== 'none' && num < 2) {
-                                        handleInputChange('numberOfImages', 2);
-                                    } else {
-                                        handleInputChange('numberOfImages', num);
-                                    }
-                                }} 
-                                disabled={baseImages.length > 0 || request.generationEngine === 'nano_experimental'}
-                                className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed" 
-                            />
-                             {(baseImages.length > 0 || request.generationEngine === 'nano_experimental') && <p className="text-xs text-gray-500 mt-1">A edição de imagem e o motor experimental geram apenas 1 resultado.</p>}
-                             {request.conceptual.sequence.type !== 'none' && <p className="text-xs text-gray-500 mt-1">Sequências narrativas precisam de pelo menos 2 imagens.</p>}
+                    </AccordionItem>
+                    <AccordionItem title="Iluminação">
+                        <div className={isAutoEquip ? 'opacity-40 pointer-events-none' : ''}>
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                                <FormField label="Hora do Dia" description="Define a luz ambiente geral da cena." tooltipText="Isto afeta a cor, a temperatura e a direção da luz ambiente. 'Golden hour' (pôr do sol) cria uma luz quente e dourada, enquanto 'hora azul' cria uma luz fria e suave.">
+                                    <SelectInput value={request.lighting.timeOfDay} onChange={(e) => handleInputChange('lighting.timeOfDay', e.target.value as TimeOfDay)} disabled={isAutoEquip}>
+                                            <option value="amanhecer">Amanhecer</option>
+                                            <option value="meio-dia">Meio-dia</option>
+                                            <option value="por_do_sol">Pôr do Sol</option>
+                                            <option value="hora_azul">Hora Azul</option>
+                                            <option value="noite">Noite</option>
+                                    </SelectInput>
+                                </FormField>
+                                <FormField label="Fonte de Luz Principal" description="A principal fonte que ilumina o sujeito." tooltipText="Cada fonte de luz tem uma característica única. 'Flash de Estúdio' é controlado e profissional. 'Neon de Cidade' cria reflexos coloridos. 'Luz de Vela' é quente e bruxuleante.">
+                                    <SelectInput value={request.lighting.source} onChange={(e) => handleInputChange('lighting.source', e.target.value as LightSource)} disabled={isAutoEquip}>
+                                            <option value="natural_daylight">Luz Natural</option>
+                                            <option value="golden_hour_sun">Sol (Golden Hour)</option>
+                                            <option value="studio_flash">Flash de Estúdio</option>
+                                            <option value="ring_light">Luz de Anel</option>
+                                            <option value="neon_city">Neon de Cidade</option>
+                                            <option value="dramatic_spotlight">Holofote Dramático</option>
+                                            <option value="tungsten_bulb">Lâmpada de Tungstênio</option>
+                                            <option value="fluorescent_light">Luz Fluorescente</option>
+                                            <option value="led_panel">Painel de LED</option>
+                                            <option value="candlelight">Luz de Vela</option>
+                                    </SelectInput>
+                                </FormField>
+                                <FormField label="Ângulo da Luz" description="A direção de onde a luz principal vem." tooltipText="'Contra-luz' cria silhuetas. 'Lateral' (Rembrandt) cria profundidade e drama. 'Superior' (Borboleta) é clássico para retratos.">
+                                    <SelectInput value={request.lighting.angle} onChange={(e) => handleInputChange('lighting.angle', e.target.value)} disabled={isAutoEquip}>
+                                            <option value="frontal">Frontal</option>
+                                            <option value="lateral">Lateral</option>
+                                            <option value="contra-luz">Contra-luz</option>
+                                            <option value="superior">Superior</option>
+                                    </SelectInput>
+                                </FormField>
+                                <FormField label="Qualidade da Luz" description="A dureza ou suavidade das sombras." tooltipText="Luz 'Dura' cria sombras nítidas e alto contraste, ideal para drama. Luz 'Difusa' cria sombras suaves e transições graduais, ideal para beleza.">
+                                    <SelectInput value={request.lighting.quality} onChange={(e) => handleInputChange('lighting.quality', e.target.value)} disabled={isAutoEquip}>
+                                            <option value="difusa">Difusa (Suave)</option>
+                                            <option value="dura">Dura (Contraste)</option>
+                                    </SelectInput>
+                                </FormField>
+                                <FormField label="Intensidade" description="A força da luz principal." tooltipText="Controla o brilho da fonte de luz principal, afetando a exposição geral da imagem.">
+                                    <SelectInput value={request.lighting.intensity} onChange={(e) => handleInputChange('lighting.intensity', e.target.value)} disabled={isAutoEquip}>
+                                            <option value="fraca">Fraca</option>
+                                            <option value="media">Média</option>
+                                            <option value="forte">Forte</option>
+                                    </SelectInput>
+                                </FormField>
+                                <FormField label="Luzes Secundárias" description="Luzes adicionais para modelar o sujeito." tooltipText="'Preenchimento' suaviza as sombras criadas pela luz principal. 'Contorno' (rim light) separa o sujeito do fundo com um brilho.">
+                                    <div className="flex items-center justify-around">
+                                        <CheckboxInput checked={request.lighting.fillLight} onChange={(e) => handleInputChange('lighting.fillLight', e.target.checked)} label="Preenchimento" disabled={isAutoEquip}/>
+                                        <CheckboxInput checked={request.lighting.rimLight} onChange={(e) => handleInputChange('lighting.rimLight', e.target.checked)} label="Contorno" disabled={isAutoEquip}/>
+                                    </div>
+                                </FormField>
+                            </div>
                         </div>
-                    </div>
-                </AccordionItem>
+                    </AccordionItem>
+                    <AccordionItem title="Atmosfera e Física">
+                        <FormField label="Efeitos Atmosféricos" description="Adicione efeitos ambientais para criar profundidade e humor na cena." tooltipText="Neblina e névoa difundem a luz e criam uma atmosfera suave ou misteriosa. Chuva cria superfícies reflexivas. Partículas de poeira podem criar raios de luz visíveis (god rays).">
+                            <div className="grid grid-cols-2 gap-2">
+                                <SelectInput value={request.atmosphere.type} onChange={(e) => handleInputChange('atmosphere.type', e.target.value)}>
+                                    <option value="none">Sem Atmosfera</option>
+                                    <option value="fog">Neblina</option>
+                                    <option value="mist">Névoa / Bruma</option>
+                                    <option value="rain">Chuva</option>
+                                    <option value="dust_particles">Partículas de Poeira</option>
+                                </SelectInput>
+                                <SelectInput value={request.atmosphere.density} onChange={(e) => handleInputChange('atmosphere.density', e.target.value)} disabled={request.atmosphere.type === 'none'}>
+                                    <option value="light">Leve</option>
+                                    <option value="medium">Média</option>
+                                    <option value="heavy">Densa / Pesada</option>
+                                </SelectInput>
+                            </div>
+                        </FormField>
+                        <FormField label="Simulação Física (Avançado)" description="Descreva com precisão como a luz e os materiais devem se comportar." tooltipText="Para usuários avançados. Especifique fenômenos ópticos (ex: refração cáustica) ou propriedades de materiais (ex: metal com reflexos anisotrópicos) para um nível de realismo extremo.">
+                            <textarea
+                                value={request.atmosphere.lightPhysics}
+                                onChange={(e) => handleInputChange('atmosphere.lightPhysics', e.target.value)}
+                                placeholder="Física da Luz (Ex: refração cáustica através de vidro, dispersão subsuperficial na pele, difração da luz em uma teia de aranha)"
+                                rows={3}
+                                className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-sm text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none" />
+                            <textarea
+                                value={request.materialProperties}
+                                onChange={(e) => handleInputChange('materialProperties', e.target.value)}
+                                placeholder="Propriedades dos Materiais (Ex: metal com reflexos anisotrópicos, tecido molhado translúcido, madeira com veios visíveis)"
+                                rows={3}
+                                className="mt-2 w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-sm text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none" />
+                        </FormField>
+                    </AccordionItem>
+                </div>
+
+                <div className="mt-4 p-2 bg-gray-900/50 rounded-lg">
+                    <h3 className="text-md font-semibold text-blue-300 mb-2">3. Pós-Produção</h3>
+                    <AccordionItem title="Filme e Imperfeições">
+                        <div className="space-y-3">
+                            <FormField label="Simulação de Filme" description="Emule a aparência de filmes fotográficos clássicos." tooltipText="Cada filme tem uma paleta de cores, contraste e granulação únicos. Kodak Portra é famoso por tons de pele, Fuji Velvia por paisagens vibrantes, e CineStill por um look cinematográfico noturno.">
+                                <SelectInput value={request.film.stock} onChange={(e) => handleInputChange('film.stock', e.target.value as FilmStock)}>
+                                        <option value="none">Nenhum (Digital Limpo)</option>
+                                        <option value="kodak_portra_400">Kodak Portra 400</option>
+                                        <option value="fuji_velvia_50">Fuji Velvia 50</option>
+                                        <option value="ilford_hp5_400">Ilford HP5 400 (P&B)</option>
+                                        <option value="kodak_ektar_100">Kodak Ektar 100</option>
+                                        <option value="cinestill_800t">CineStill 800T</option>
+                                        <option value="polaroid_600">Polaroid 600</option>
+                                </SelectInput>
+                            </FormField>
+                            <FormField label="Defeitos Ópticos e Físicos" description="Adicione imperfeições para um look mais autêntico ou 'lo-fi'." tooltipText="Use estas opções para quebrar a perfeição digital. 'Lens Flare' adiciona realismo à iluminação. 'Vazamento de Luz' e 'Poeira/Riscos' simulam câmeras antigas ou danificadas.">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <SelectInput value={request.film.defects.filmGrain} onChange={(e) => handleInputChange('film.defects.filmGrain', e.target.value)}>
+                                            <option value="none">Nenhuma Granulação</option>
+                                            <option value="fine">Fina</option>
+                                            <option value="medium">Média</option>
+                                            <option value="heavy">Pesada</option>
+                                    </SelectInput>
+                                    <SelectInput value={request.film.defects.lensFlare} onChange={(e) => handleInputChange('film.defects.lensFlare', e.target.value)}>
+                                            <option value="none">Sem Lens Flare</option>
+                                            <option value="subtle">Sutil</option>
+                                            <option value="dramatic">Dramático</option>
+                                            <option value="imperfect">Imperfeito</option>
+                                    </SelectInput>
+                                    <div className="col-span-2 grid grid-cols-2 gap-2">
+                                        <CheckboxInput checked={request.film.defects.lightLeaks} onChange={(e) => handleInputChange('film.defects.lightLeaks', e.target.checked)} label="Vazamento de Luz"/>
+                                        <CheckboxInput checked={request.film.defects.dustAndScratches} onChange={(e) => handleInputChange('film.defects.dustAndScratches', e.target.checked)} label="Poeira/Riscos"/>
+                                        <CheckboxInput checked={request.film.defects.sensorSpots} onChange={(e) => handleInputChange('film.defects.sensorSpots', e.target.checked)} label="Manchas no Sensor"/>
+                                        <CheckboxInput checked={request.film.defects.negativeScratches} onChange={(e) => handleInputChange('film.defects.negativeScratches', e.target.checked)} label="Riscos no Negativo"/>
+                                    </div>
+                                </div>
+                            </FormField>
+                        </div>
+                    </AccordionItem>
+                    <AccordionItem title="Saída e Finalização">
+                        <div className="space-y-3">
+                            <FormField label="Qualidade e Resolução" description="Controle a qualidade da renderização e a resolução simulada." tooltipText="'Passadas' se refere à quantidade de 'trabalho' que a IA faz. Mais passadas resultam em mais detalhes e menos artefatos. A resolução simulada instrui a IA a gerar uma imagem com o nível de detalhe esperado para aquela resolução.">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <SelectInput value={request.output.steps} onChange={(e) => handleInputChange('output.steps', e.target.value)}>
+                                        <option value="low">Baixa (Rápido)</option>
+                                        <option value="medium">Média (Padrão)</option>
+                                        <option value="high">Alta (Detalhado)</option>
+                                        <option value="ultra">Ultra (Máxima)</option>
+                                    </SelectInput>
+                                    <SelectInput value={request.output.resolution} onChange={(e) => handleInputChange('output.resolution', e.target.value)}>
+                                        <option value="hd">HD (720p)</option>
+                                        <option value="qhd">QHD (2K)</option>
+                                        <option value="uhd4k">UHD (4K)</option>
+                                        <option value="uhd8k">UHD (8K)</option>
+                                    </SelectInput>
+                                </div>
+                            </FormField>
+                            <FormField label="Número de Imagens" description="Quantas variações da imagem gerar." tooltipText="Gere até 4 imagens por vez para escolher a melhor. Desabilitado se estiver editando uma imagem base ou usando o modo de sequência.">
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="4"
+                                    value={request.numberOfImages}
+                                    onChange={(e) => {
+                                        const num = parseInt(e.target.value, 10);
+                                        if(request.conceptual.sequence.type !== 'none' && num < 2) {
+                                            handleInputChange('numberOfImages', 2);
+                                        } else {
+                                            handleInputChange('numberOfImages', num);
+                                        }
+                                    }}
+                                    disabled={baseImages.length > 0 || request.generationEngine === 'nano_experimental'}
+                                    className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                                />
+                                {(baseImages.length > 0 || request.generationEngine === 'nano_experimental') && <p className="text-xs text-gray-500 mt-1">A edição de imagem e o motor experimental geram apenas 1 resultado.</p>}
+                                {request.conceptual.sequence.type !== 'none' && <p className="text-xs text-gray-500 mt-1">Sequências narrativas precisam de pelo menos 2 imagens.</p>}
+                            </FormField>
+                        </div>
+                    </AccordionItem>
+                </div>
                 {error && <p className="text-red-400 text-sm text-center py-2">{error}</p>}
                 
                 {previewText && (
