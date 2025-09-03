@@ -1,7 +1,7 @@
 
 
 import React, { useState, useEffect, useCallback } from 'react';
-import type { ConsistencyProfile, PhotorealisticRequest, TimeOfDay, LightSource, LensType, SensorType, PhotographicStyle, UploadedImage, FilmStock, PhotoDefects } from '../types';
+import type { ConsistencyProfile, PhotorealisticRequest, TimeOfDay, LightSource, LensType, SensorType, PhotographicStyle, UploadedImage, FilmStock, PhotoDefects, CameraAngle } from '../types';
 import { StudioIcon, SparklesIcon, UploadIcon, XMarkIcon, LightBulbIcon, CameraIcon, ClipboardCopyIcon, ArrowPathIcon } from './icons';
 import { getCameraScenePreview, analyzeImageStyle } from '../services/geminiService';
 
@@ -33,6 +33,50 @@ const fileToBase64 = (file: File): Promise<UploadedImage> => {
 
 const APERTURE_VALUES = ["f/1.0", "f/1.2", "f/1.4", "f/1.8", "f/2.0", "f/2.2", "f/2.8", "f/3.5", "f/3.6", "f/4.0", "f/4.5", "f/5.0", "f/5.6", "f/6.3", "f/7.1", "f/8.0", "f/9.0", "f/10.0", "f/11.0", "f/13.0", "f/14.0", "f/16.0", "f/18.0", "f/20.0", "f/22.0"];
 const SHUTTER_SPEED_VALUES = ["30s", "15s", "8s", "4s", "2s", "1s", "1/15s", "1/60s", "1/125s", "1/250s", "1/500s", "1/1000s", "1/2000s", "1/4000s", "1/8000s", "1/16000s", "1/32000s"];
+
+const CAMERA_ANGLES = [
+    {
+        group: 'Nível/Altura', angles: [
+            { id: 'eye_level', name: 'Nível do Olho' },
+            { id: 'shoulder_level', name: 'Nível do Ombro' },
+            { id: 'hip_level', name: 'Nível do Quadril' },
+            { id: 'knee_level', name: 'Nível do Joelho' },
+            { id: 'ground_level', name: 'Nível do Chão' },
+        ]
+    },
+    {
+        group: 'Angulação', angles: [
+            { id: 'low_angle', name: 'Ângulo Baixo (Contrapicada)' },
+            { id: 'high_angle', name: 'Ângulo Alto (Picada)' },
+            { id: 'dutch_angle', name: 'Ângulo Holandês (Inclinado)' },
+            { id: 'over_the_shoulder', name: 'Sobre o Ombro (OTS)' },
+            { id: 'over_the_hip', name: 'Sobre o Quadril' },
+        ]
+    },
+    {
+        group: 'Distância/Enquadramento', angles: [
+            { id: 'establishing_shot', name: 'Plano de Estabelecimento' },
+            { id: 'extreme_wide_shot', name: 'Plano Geral Extremo (EWS)' },
+            { id: 'wide_shot', name: 'Plano Geral (WS)' },
+            { id: 'full_shot', name: 'Plano Inteiro (FS)' },
+            { id: 'medium_wide_shot', name: 'Plano Americano (MWS)' },
+            { id: 'cowboy_shot', name: 'Plano Cowboy' },
+            { id: 'medium_shot', name: 'Plano Médio (MS)' },
+            { id: 'medium_close_up', name: 'Plano Médio Próximo (MCU)' },
+            { id: 'close_up', name: 'Primeiro Plano (CU)' },
+            { id: 'extreme_close_up', name: 'Primeiríssimo Plano (ECU)' },
+        ]
+    },
+    {
+        group: 'Especial/Perspectiva', angles: [
+            { id: 'pov_shot', name: 'Ponto de Vista (POV)' },
+            { id: 'birds_eye_view', name: 'Visão de Pássaro (Top-down)' },
+            { id: 'aerial_shot', name: 'Aéreo' },
+            { id: 'arc_shot', name: 'Plano em Arco' },
+            { id: 'dolly_zoom', name: 'Dolly Zoom (Efeito Vertigo)' },
+        ]
+    }
+];
 
 const CAMERA_DB = [
     { brand: 'Smartphones', cameras: [
@@ -313,6 +357,7 @@ const INITIAL_REQUEST_STATE: PhotorealisticRequest = {
         chromaticAberration: 'none',
         lensTilt: 'none',
         lensShift: 'none',
+        cameraAngle: 'eye_level',
     },
     depthOfField: {
         focusPoint: 'Olhos do sujeito',
@@ -870,6 +915,13 @@ export const PhotographicStudio: React.FC<PhotographicStudioProps> = ({ profiles
                                 {CAMERA_DB.map(group => (
                                     <optgroup key={group.brand} label={group.brand}>
                                         {group.cameras.map(camera => <option key={camera.id} value={camera.id}>{camera.name}</option>)}
+                                    </optgroup>
+                                ))}
+                            </SelectInput>
+                            <SelectInput value={request.camera.cameraAngle} onChange={(e) => handleInputChange('camera.cameraAngle', e.target.value as CameraAngle)} disabled={isAutoEquip}>
+                                {CAMERA_ANGLES.map(group => (
+                                    <optgroup key={group.group} label={group.group}>
+                                        {group.angles.map(angle => <option key={angle.id} value={angle.id}>{angle.name}</option>)}
                                     </optgroup>
                                 ))}
                             </SelectInput>
